@@ -35,12 +35,14 @@ candidate_models = ['p(R1,C1)-p(R2,C2)',
                     'p(R1,C1)-p(R2,CPE2)',
                     'p(R1,CPE1)-p(R2,C2)',
                     'p(R1,CPE1)-p(R2,CPE2)',
-                    'p(R1,C1-W1)-p(R2,C2)',
                     'p(R1,C1)-p(R2,C2-W2)',                   
                     'p(R1,C1-W1)-p(R2,C2-W2)',
-                    'p(R1,C1-G1)-p(R2,C2)',
                     'p(R1,C1)-p(R2,C2-G2)',                   
-                    'p(R1,C1-G1)-p(R2,C2-G2)']
+                    'p(R1,C1-G1)-p(R2,C2-G2)',
+                    'p(R1,C1)','p(R1,CPE1)',
+                    'p(R1,C1-W1)','p(R1,C1-G1)']
+
+single_circuit = []
 
 #define the possible circuit models that we must iterate through
 
@@ -198,7 +200,8 @@ def generateDRT(N_freqs, frequencies, Z, Z_real, Z_imag, Z_mag): #subroutine to 
 
 def initial_guess (model, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec, n_CPE = 0.85):
     
-    peaks, properties = find_peaks(gamma_DRT, height=0.25)  # Adjust `height` threshold if needed
+    peaks, properties = find_peaks(gamma_DRT, height=0.15)  # Adjust `height` threshold if needed
+    #(peak will be found if it is 10% of the maximum height in the graph)
     peak_heights = properties["peak_heights"]
     
     R0_guess = R_inf_DRT
@@ -220,62 +223,83 @@ def initial_guess (model, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec, n_CPE = 0.85):
     selected_heights = peak_heights[top_indices]
     selected_taus = tau_vec[selected_peaks]
     
-    
+    ##### some circuits have only 1 DRT peak
     diameter = Z_real.max() - R0_guess
     
     weights = selected_heights / np.sum(selected_heights)
     R_vals = diameter * weights
     
-    R1, R2 = R_vals[:2]
-    tau1, tau2 = selected_taus[:2]
+    check = False
     
-    C1 = tau1 / R1
-    Q2 = 1 / (R2 * tau2 ** n_CPE)
-    
-    Q1 = 1 / (R1 * tau1 ** n_CPE)
-    C2 = tau2 / R2
-    
-    #generate the diffusion models for this split
-    omega1 = 1 / tau1
-    omega2 = 1/ tau2
-    W1 = R1 * np.sqrt(omega1)
-    W2 = R2 * np.sqrt(omega2)
-    
+    if len(R_vals) < 2: #two peaks not detected
+        R1 = R_vals[-1]
+        tau1 = selected_taus[-1]
+        C1 = tau1 / R1
+        Q1 = 1 / (R1 * tau1 ** n_CPE)
+        omega1 = 1 / tau1
+        W1 = R1 * np.sqrt(omega1)
+        check = True
+    else:
+        R1, R2 = R_vals[:2]
+        tau1, tau2 = selected_taus[:2]
+        
+        C1 = tau1 / R1
+        Q2 = 1 / (R2 * tau2 ** n_CPE)
+        
+        Q1 = 1 / (R1 * tau1 ** n_CPE)
+        C2 = tau2 / R2
+        
+        #generate the diffusion models for this split
+        omega1 = 1 / tau1
+        omega2 = 1/ tau2
+        W1 = R1 * np.sqrt(omega1)
+        W2 = R2 * np.sqrt(omega2)
         
         
+    # print('Printing stuff')
+    # print(R1, R2, C1, C2, CPE1, CPE2, tau1, tau2)
     
     diffusion_guess = []  
   
-    
-    if model[6:] == 'p(R1,C1-W1)-p(R2,C2)':
-        diffusion_guess.extend([R1,C1,W1,R2,C2])
-    elif model[6:] == 'p(R1,C1)-p(R2,C2-W2)':
-        diffusion_guess.extend([R1,C1,R2,C2,W2])
-    elif model[6:] == 'p(R1,C1-W1)-p(R2,C2-W2)':
-        diffusion_guess.extend([R1,C1,W1,R2,C2,W2])
-    elif model[6:] == 'p(R1,C1-G1)-p(R2,C2)':
-        diffusion_guess.extend([R1,C1,R1,tau1,R2,C2])
-    elif model[6:] == 'p(R1,C1)-p(R2,C2-G2)':
-        diffusion_guess.extend([R1,C1,R2,C2,R2,tau2])
-    elif model[6:] == 'p(R1,C1-G1)-p(R2,C2-G2)':
-        diffusion_guess.extend([R1,C1,R1,tau1,R2,C2,R2,tau2])
+    if check:
+        if model[6:] == 'p(R1,C1-W1)':
+            diffusion_guess.extend([R1,C1,W1])
+        elif model[6:] == 'p(R1,C1-G1)':
+            diffusion_guess.extend([R1,C1,R1,tau1])
+    else:
+        
+        if model[6:] == 'p(R1,C1)-p(R2,C2-W2)':
+            diffusion_guess.extend([R1,C1,R2,C2,W2])
+        elif model[6:] == 'p(R1,C1-W1)-p(R2,C2-W2)':
+            diffusion_guess.extend([R1,C1,W1,R2,C2,W2])
+        elif model[6:] == 'p(R1,C1)-p(R2,C2-G2)':
+            diffusion_guess.extend([R1,C1,R2,C2,R2,tau2])
+        elif model[6:] == 'p(R1,C1-G1)-p(R2,C2-G2)':
+            diffusion_guess.extend([R1,C1,R1,tau1,R2,C2,R2,tau2])
     
     
     init_guess = [L0_guess,R0_guess]
     
-    if model[6:] == 'p(R1,C1)-p(R2,C2)':
-        init_guess.extend([R1,C1,R2,C2])    
-    elif model[6:] == 'p(R1,CPE1)-p(R2,C2)':
-        init_guess.extend([R1,Q1,CPE1,R2,C2])
-    elif model[6:] == 'p(R1,C1)-p(R2,CPE2)':
-        init_guess.extend([R1,C1,R2,Q2,CPE2])
-    elif model[6:] == 'p(R1,CPE1)-p(R2,CPE2)':
-        init_guess.extend([R1,Q1,CPE1,R2,Q2,CPE2])
+    if check:
+        if model[6:] == 'p(R1,C1)':
+            init_guess.extend([R1,C1])  
+        elif model[6:] == 'p(R1,CPE1)':
+            init_guess.extend([R1,Q1,CPE1])
+    else:
+            
+        if model[6:] == 'p(R1,C1)-p(R2,C2)':
+            init_guess.extend([R1,C1,R2,C2])    
+        elif model[6:] == 'p(R1,CPE1)-p(R2,C2)':
+            init_guess.extend([R1,Q1,CPE1,R2,C2])
+        elif model[6:] == 'p(R1,C1)-p(R2,CPE2)':
+            init_guess.extend([R1,C1,R2,Q2,CPE2])
+        elif model[6:] == 'p(R1,CPE1)-p(R2,CPE2)':
+            init_guess.extend([R1,Q1,CPE1,R2,Q2,CPE2])
     
     if 'R' in model or 'G' in model:
         init_guess.extend(diffusion_guess)
    
-    return init_guess 
+    return init_guess, R_vals
 
 
 def fitted_model(circuit):
@@ -321,12 +345,18 @@ def fitted_model(circuit):
 
 def generate_guesses(index, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec):
     model = ckt_init+candidate_models[index]
-    init_vector = initial_guess(model, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec)
+    init_vector, R_vals = initial_guess(model, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec)
 
     print('Circuit:',model)
+    
+    if len(R_vals) < 2 and index <= 7 or len(R_vals) >1 and index >7: #do not attempt to fit the circuit
+        return 'single', None, None
 
     circuit = CustomCircuit(model, initial_guess=init_vector)
-    circuit.fit(frequencies, Z)
+    try:
+        circuit.fit(frequencies, Z, maxfev=25000) 
+    except:
+        return None, None, None
     
     residuals, Z_fit = fitted_model(circuit)
     
@@ -334,18 +364,22 @@ def generate_guesses(index, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec):
 
 
 #generate the folder paths to extract the EIS data from multiple cells
-cell_fit = dict()
-start = 1
-end = 3
+DRT_dict = dict() #store the computed DRT values which will be used again and again
+circuit_dict = dict()
+single_ckt=[]
 
-threshold = 5 #(in percentage values)
+AST_fit = dict()
+start = 1
+end = 42
+
+threshold = 3 #3% threshold as a preliminary elimination method 
 
 for k in range(start,end+1):
+    if k == 6:
+        continue #missing data for cell 6
     
     f = f"Cell_{k:02}"  # Pads i to two digits, e.g., "01", "12", etc.
-    #folder = f"C:\\Users\\praktikant\\Desktop\\Dataset\\01-Data\\{f}\\04-EIS_H2Air_RH100\\100mAcm2"
-    
-    folder = f"D:\\Dataset\\01-Data\\{f}\\04-EIS_H2Air_RH100\\100mAcm2"
+    folder = f"C:\\Users\\praktikant\\Desktop\\Dataset\\01-Data\\{f}\\04-EIS_H2Air_RH100\\100mAcm2"
     #obtain the best ECM model at this RH and current density
     
     #step 1: extract the data as Pandas dataframe
@@ -356,7 +390,7 @@ for k in range(start,end+1):
     #plot_Bode(df_list, AST_labels)
     
     
-    best_fit = dict()
+   
     #for each of these cycles generate a best fit circuit
     for j in range(len(df_list)):
         N_freqs = df_list[j].shape[0]
@@ -368,13 +402,27 @@ for k in range(start,end+1):
         
         R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec = generateDRT(N_freqs, frequencies, Z, Z_real, Z_imag, Z_mag)
         
+        key1 = f'Cell_{k:02}'
+        key2 = f'AST {AST_labels[j]}'
+        key = (key1, key2)
+        DRT_dict[key] = [R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec] #store for future uses
+        
         results = []
         #iterate over all the possible circuit models we have
         for i in range(len(candidate_models)):
             model = ckt_init+candidate_models[i]
-            print(f'Evaluating circuit {model} for cell {k} and AST {AST_labels[j]}')
+            print(f'Evaluating circuit {model} for Cell {k} and AST {AST_labels[j]}')
             
-            circuit,residuals, Z_fit = generate_guesses(i, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec) 
+            circuit,residuals, Z_fit = generate_guesses(i, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec)
+            
+            if residuals is None and circuit is not None and circuit == 'single': #single DRT peak detected
+                if k not in single_ckt:
+                    single_ckt.append(k) #store problematic circuits and the model that you tried
+                continue
+            
+            if residuals is None:
+                continue #do not perform calculations on None data
+                
             magnitude = np.sqrt(np.mean(np.abs(residuals)**2))
             
             rmse = np.sqrt(np.mean(np.abs(residuals)**2))
@@ -383,42 +431,66 @@ for k in range(start,end+1):
             print(f'RMSE: {rmse:.4f}')
             print(f'MAPE: {mape:.2f}%')
             
-            results.append({
-                'index': i,
-                'model': model,
-                'circuit': circuit,
-                'rmse': rmse,
-                'mape': mape
-            })
-
-        # Sort by RMSE
-        sorted_results = sorted(results, key=lambda x: x['mape']) #list of dicts
-        best = sorted_results[0] #dict with best mape -> {1, 'L0-C0...', <>, rmse, mape}
-        #this returns the best circuit for a given AST cycle (we do not filter among that)
+            keyVal = (key1, key2, model)
+            circuit_dict[keyVal] = [residuals, circuit, rmse, mape] 
+            #store the model, residuals, circuit object and the error analytics
+            
+            if mape < threshold:
+                if model in AST_fit:
+                    AST_fit[model][0] += 1
+                else:
+                    AST_fit[model] = [1,0]
+                
         
-        if best['model'] in best_fit:
-            best_fit[best['model']][0]+=1
-        else:
-            best_fit[best['model']] = [1,best]
         
-    #now we check the best model across different ASTs
-    #sort the dictionary and then choose all the models which are <5% fit (threshold value)
-    
-    #choose multiple best fits for your cell
-    best_AST = sorted(best_fit.items(), key =  lambda x: x[1][1]['mape'])
-    
-    for elem in best_AST:
-        if elem[1][1]['mape'] < threshold:
-            if elem[1][0] in cell_fit: #access the name of the string
-                cell_fit[elem[1][1]['model']] += 1
-            else:
-                cell_fit[elem[1][1]['model']] = 1
-    
-    
-print(f'Count of acceptable models: {cell_fit}')    
+#now check how many acceptable ASTs appear (we have already kept only the physically explainable models) 
+invalid_models = dict()
+#among the overall acceptable ECM values, let us see how the average MAPE changes across each entry
+for model in AST_fit:
+    mape = count = 0
+    for k in range(start,end+1):
+        if k == 6:
+            continue
+        for j in range(len(df_list)):
+            key1 = f'Cell_{k:02}'
+            key2 = f'AST {AST_labels[j]}'
+            key = (key1, key2, model)
+            if key in circuit_dict:
+                mape += circuit_dict[key][-1]
+                count += 1
+            else: #mention that the given circuit cannot be used for the following cell and AST
+                value = (key1,key2)
+                if model in invalid_models:
+                    invalid_models[model].append(value)
+                else:
+                    invalid_models[model] = [value,]
+                
+    AST_fit[model][-1] = round(mape/count,4) #store the average MAPE whenever the circuit is used for a fit
+    #the MAPE should be bound below the threshold ... so we are choosing fairly good fits and checking which would 
+    #be the best among them
+            
 
-best_cell = max(cell_fit,key = cell_fit.get)
-print(f"Best ECM for cells {start} to {end} is {best_cell} with count {cell_fit[best_cell]}")            
+#print(f'Count of acceptable models: {AST_fit}')    
+total = sum(AST_fit[model][0] for model in AST_fit)
+
+with open ('model_summary.txt','w') as f:
+    for model in AST_fit:
+        count = AST_fit[model][0]
+        mape = AST_fit[model][1]
+        p = count / total * 100
+        line = f'Model {model} appears {count} times  = {p:.2f}% and a mean MAPE of {mape:.4f}'
+        f.writeline(line)
+
+#store the evaluated models as files 
+import pickle
+
+# Save dictionaries to a file
+with open("analytics.pkl", "wb") as f:
+    pickle.dump({
+        "circuit_dict": circuit_dict,
+        "DRT_dict": DRT_dict,
+        "invalid_model": invalid_models
+    }, f)
         
     
     
