@@ -21,7 +21,7 @@ import pickle
 
 # Load the dictionaries from the .pkl file
 data = None
-with open("RH40,1000\\analytics.pkl", "rb") as f:
+with open("RH100,1000\\analytics.pkl", "rb") as f:
     data = pickle.load(f)
 
 # Access the individual dictionaries
@@ -39,7 +39,7 @@ unique_cells = []
 
 for i in range(start,end+1):
     f = f"Cell_{i:02}"  # Pads i to two digits, e.g., "01", "12", etc.
-    folder = f"C:\\Users\\praktikant\\Desktop\\Dataset\\01-Data\\{f}\\09-EIS_H2Air_RH40\\1000mAcm2"
+    folder = f"C:\\Users\\praktikant\\Desktop\\Dataset\\01-Data\\{f}\\04-EIS_H2Air_RH100\\1000mAcm2"
     if not os.path.exists(folder):
         continue
     
