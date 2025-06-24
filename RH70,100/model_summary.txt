@@ -1,0 +1,7 @@
+Model L0-R0-p(R1,CPE1)-p(R2,C2) appears 66 times  = 18.80% and a mean MAPE of 3.1451
+Model L0-R0-p(R1,C1)-p(R2,C2-W2) appears 63 times  = 17.95% and a mean MAPE of 2.3316
+Model L0-R0-p(R1,C1)-p(R2,C2-G2) appears 64 times  = 18.23% and a mean MAPE of 2.5763
+Model L0-R0-p(R1,C1-G1)-p(R2,C2-G2) appears 36 times  = 10.26% and a mean MAPE of 8.3252
+Model L0-R0-p(R1,CPE1)-p(R2,CPE2) appears 29 times  = 8.26% and a mean MAPE of 7.3255
+Model L0-R0-p(R1,C1-W1)-p(R2,C2-W2) appears 50 times  = 14.25% and a mean MAPE of 6.4646
+Model L0-R0-p(R1,C1)-p(R2,CPE2) appears 43 times  = 12.25% and a mean MAPE of 11.8803
