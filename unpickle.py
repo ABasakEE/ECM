@@ -39,7 +39,9 @@ unique_cells = []
 
 for i in range(start,end+1):
     f = f"Cell_{i:02}"  # Pads i to two digits, e.g., "01", "12", etc.
-    folder = f"C:\\Users\\praktikant\\Desktop\\Dataset\\01-Data\\{f}\\04-EIS_H2Air_RH100\\1000mAcm2"
+    #folder = f"C:\\Users\\praktikant\\Desktop\\Dataset\\01-Data\\{f}\\04-EIS_H2Air_RH100\\1000mAcm2"
+    
+    folder = f"D:\\Dataset\\01-Data\\{f}\\04-EIS_H2Air_RH100\\1000mAcm2"
     if not os.path.exists(folder):
         continue
     
