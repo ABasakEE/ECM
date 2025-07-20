@@ -35,12 +35,12 @@ candidate_models = ['p(R1,C1)-p(R2,C2)',
                     'p(R1,C1)-p(R2,CPE2)',
                     'p(R1,CPE1)-p(R2,C2)',
                     'p(R1,CPE1)-p(R2,CPE2)',
-                    'p(R1,C1)-p(R2,C2-W2)',                   
-                    'p(R1,C1-W1)-p(R2,C2-W2)',
-                    'p(R1,C1)-p(R2,C2-G2)',                   
-                    'p(R1,C1-G1)-p(R2,C2-G2)',
+                    'p(R1,C1)-p(C2,R2-W2)',                   
+                    'p(C1,R1-W1)-p(C2,R2-W2)',
+                    'p(R1,C1)-p(C2,R2-G2)',                   
+                    'p(C1,R1-G1)-p(C2,R2-G2)',
                     'p(R1,C1)','p(R1,CPE1)',
-                    'p(R1,C1-W1)','p(R1,C1-G1)']
+                    'p(C1,R1-W1)','p(C1,R1-G1)']
 
 single_circuit = []
 
@@ -262,19 +262,19 @@ def initial_guess (model, R_inf_DRT, L_0_DRT, gamma_DRT, tau_vec, n_CPE = 0.85):
     diffusion_guess = []  
   
     if check:
-        if model[6:] == 'p(R1,C1-W1)':
+        if model[6:] == 'p(C1,R1-W1)':
             diffusion_guess.extend([R1,C1,W1])
-        elif model[6:] == 'p(R1,C1-G1)':
+        elif model[6:] == 'p(C1,R1-G1)':
             diffusion_guess.extend([R1,C1,R1,tau1])
     else:
         
-        if model[6:] == 'p(R1,C1)-p(R2,C2-W2)':
+        if model[6:] == 'p(R1,C1)-p(C2,R2-W2)':
             diffusion_guess.extend([R1,C1,R2,C2,W2])
-        elif model[6:] == 'p(R1,C1-W1)-p(R2,C2-W2)':
+        elif model[6:] == 'p(C1,R1-W1)-p(C2,R2-W2)':
             diffusion_guess.extend([R1,C1,W1,R2,C2,W2])
-        elif model[6:] == 'p(R1,C1)-p(R2,C2-G2)':
+        elif model[6:] == 'p(R1,C1)-p(C2,R2-G2)':
             diffusion_guess.extend([R1,C1,R2,C2,R2,tau2])
-        elif model[6:] == 'p(R1,C1-G1)-p(R2,C2-G2)':
+        elif model[6:] == 'p(C1,R1-G1)-p(C2,R2-G2)':
             diffusion_guess.extend([R1,C1,R1,tau1,R2,C2,R2,tau2])
     
     
@@ -370,13 +370,13 @@ single_ckt=[]
 
 AST_fit = dict()
 start = 1
-end = 42
+end = 34
 
-threshold = 3 #3% threshold as a preliminary elimination method 
+threshold = 6 #3% threshold as a preliminary elimination method 
 
 for k in range(start,end+1):
-    if k == 6:
-        continue #missing data for cell 6
+    if 3<k<10:
+        continue #these cells do not work well with a 2 EC loop 
     
     f = f"Cell_{k:02}"  # Pads i to two digits, e.g., "01", "12", etc.
     # folder = f"C:\\Users\\praktikant\\Desktop\\Dataset\\01-Data\\{f}\\04-EIS_H2Air_RH100\\100mAcm2"
@@ -474,12 +474,14 @@ for model in AST_fit:
 #print(f'Count of acceptable models: {AST_fit}')    
 total = sum(AST_fit[model][0] for model in AST_fit)
 
+count_dict = []
 with open ('model_summary.txt','w') as f:
     for model in AST_fit:
         count = AST_fit[model][0]
         mape = AST_fit[model][1]
-        p = count / total * 100
+        p = count / total * 100            
         line = f'Model {model} appears {count} times  = {p:.2f}% and a mean MAPE of {mape:.4f}\n'
+        count_dict.append([model,count,round(mape,4)])
         f.write(line)
 
 #store the evaluated models as files 
@@ -490,7 +492,8 @@ with open("analytics.pkl", "wb") as f:
     pickle.dump({
         "circuit_dict": circuit_dict,
         "DRT_dict": DRT_dict,
-        "invalid_model": invalid_models
+        "invalid_model": invalid_models,
+        "model_count": count_dict
     }, f)
         
     
